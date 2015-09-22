@@ -136,6 +136,35 @@ def unspent(*args, **kwargs):
     return f(*args)
 
 
+def download_history(addr):
+    txs = []
+    offset = 0
+    while 1:
+        gathered = False
+        while not gathered:
+            try:
+                data = make_request(
+                    'https://blockchain.info/address/%s?format=json&offset=%s' %
+                    (addr, offset))
+                gathered = True
+            except Exception as e:
+                try:
+                    sys.stderr.write(e.read().strip())
+                except:
+                    sys.stderr.write(str(e))
+                gathered = False
+        try:
+            jsonobj = json.loads(data)
+        except:
+            raise Exception("Failed to decode data: "+data)
+        txs.extend(jsonobj["txs"])
+        if len(jsonobj["txs"]) < 50:
+            break
+        offset += 50
+        sys.stderr.write("Fetching more transactions... "+str(offset)+'\n')
+    return txs
+
+
 # Gets the transaction output history of a given set of addresses,
 # including whether or not they have been spent
 def history(*args):
@@ -150,30 +179,7 @@ def history(*args):
 
     txs = []
     for addr in addrs:
-        offset = 0
-        while 1:
-            gathered = False
-            while not gathered:
-                try:
-                    data = make_request(
-                        'https://blockchain.info/address/%s?format=json&offset=%s' %
-                        (addr, offset))
-                    gathered = True
-                except Exception as e:
-                    try:
-                        sys.stderr.write(e.read().strip())
-                    except:
-                        sys.stderr.write(str(e))
-                    gathered = False
-            try:
-                jsonobj = json.loads(data)
-            except:
-                raise Exception("Failed to decode data: "+data)
-            txs.extend(jsonobj["txs"])
-            if len(jsonobj["txs"]) < 50:
-                break
-            offset += 50
-            sys.stderr.write("Fetching more transactions... "+str(offset)+'\n')
+        txs.extend(download_history(addr))
     outs = {}
     for tx in txs:
         for o in tx["out"]:
