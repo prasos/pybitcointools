@@ -416,7 +416,7 @@ def apply_multisignatures(*args):
 
 
 def is_inp(arg):
-    return len(arg) > 64 or "output" in arg or "outpoint" in arg
+    return len(arg) > 86 or "output" in arg or "outpoint" in arg
 
 
 def mktx(*args):
@@ -497,10 +497,14 @@ def mksend(*args):
     osum, outputs2 = 0, []
     for o in outs:
         if isinstance(o, string_types):
+            raw = o[:o.find(':')]
             o2 = {
-                "address": o[:o.find(':')],
                 "value": int(o[o.find(':')+1:])
             }
+            if re.match('^[0-9a-fA-F]*$', raw):
+                o2["script"] = raw
+            else:
+                o2["address"] = raw
         else:
             o2 = o
         outputs2.append(o2)
