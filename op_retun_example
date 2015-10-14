@@ -1,0 +1,15 @@
+#!/bin/sh -eu
+
+SCRIPTDIR="$(dirname "$(readlink -f "$0")")"
+BTCTOOL="$SCRIPTDIR/pybitcointools/pybtctool"
+PRIVKEY=L5AELXrbmtbnJ4H1x368Yo6C3GeXtP1e52g9qG4F8EPohh5YCf9w # Change this key
+SOURCE_FILE=test.txt
+
+# Calculate hash, generate OP_RETURN transaction containing that hash,
+# and push it to network
+HASH=`sha256sum "$SOURCE_FILE"|cut -f 1 -d ' '`
+ADDR=`$BTCTOOL privtoaddr $PRIVKEY`
+TX=`$BTCTOOL unspent $ADDR | $BTCTOOL -j select 10000 | $BTCTOOL -j mksend 6a28444f4350524f4f46$HASH:0 $ADDR 10000 | $BTCTOOL -s signall $PRIVKEY`
+TXHASH=`$BTCTOOL txhash $TX`
+$BTCTOOL blockr_pushtx $TX
+echo Transaction hash: $TXHASH
